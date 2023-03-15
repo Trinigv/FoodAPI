@@ -3,10 +3,10 @@ const { Sequelize } = require('sequelize');
 const fs = require('fs');
 const path = require('path');
 const { timeStamp } = require('console');
+var Sql = require('sequelize');
 
 const { SQL_USER, SQL_HOST, SQL_PW } = process.env;
 
-var Sql = require('sequelize');
 var sql = new Sql('recipes', SQL_USER, SQL_PW, {
 	host: SQL_HOST,
 	dialect: 'mssql',
