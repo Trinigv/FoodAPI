@@ -6,13 +6,22 @@ const { timeStamp } = require('console');
 
 const { SQL_USER, SQL_HOST, SQL_PW } = process.env;
 
-const sequelize = new Sequelize(
-	`postgres://${SQL_USER}:${SQL_PW}@${SQL_HOST}/recipes`,
-	{
-		logging: false, // set to console.log to see the raw SQL queries
-		native: false, // lets Sequelize know we can use pg-native for ~30% more speed
-	}
-);
+var Sql = require('sequelize');
+var sql = new Sql('recipes', SQL_USER, SQL_PW, {
+	host: SQL_HOST,
+	dialect: 'mssql',
+	driver: 'tedious',
+	options: {
+		encrypt: true,
+		database: 'recipes',
+	},
+	port: 1433,
+	pool: {
+		max: 5,
+		min: 0,
+		idle: 10000,
+	},
+});
 const basename = path.basename(__filename);
 
 const modelDefiners = [];
@@ -30,29 +39,25 @@ fs.readdirSync(path.join(__dirname, '/models'))
 	});
 
 // Injectamos la conexion (sequelize) a todos los modelos
-modelDefiners.forEach((model) => model(sequelize));
+modelDefiners.forEach((model) => model(sql));
 // Capitalizamos los nombres de los modelos ie: product => Product
-let entries = Object.entries(sequelize.models);
+let entries = Object.entries(sql.models);
 let capsEntries = entries.map((entry) => [
 	entry[0][0].toUpperCase() + entry[0].slice(1),
 	entry[1],
 ]);
-sequelize.models = Object.fromEntries(capsEntries);
+sql.models = Object.fromEntries(capsEntries);
 
 // En sequelize.models están todos los modelos importados como propiedades
 // Para relacionarlos hacemos un destructuring
-const { Recipe, Diet } = sequelize.models;
-var tablaIntermedia = sequelize.define(
-	'recipe_diet',
-	{},
-	{ timestamps: false }
-);
+const { Recipe, Diet } = sql.models;
+var tablaIntermedia = sql.define('recipe_diet', {}, { timestamps: false });
 
 // Aca vendrian las relaciones
 Recipe.belongsToMany(Diet, { through: tablaIntermedia });
 Diet.belongsToMany(Recipe, { through: tablaIntermedia });
 
 module.exports = {
-	...sequelize.models, // para poder importar los modelos así: const { Product, User } = require('./db.js');
-	conn: sequelize, // para importart la conexión { conn } = require('./db.js');
+	...sql.models, // para poder importar los modelos así: const { Product, User } = require('./db.js');
+	conn: sql, // para importart la conexión { conn } = require('./db.js');
 };
